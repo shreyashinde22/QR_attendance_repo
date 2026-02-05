@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Attendance System</title>
+
+    <!-- Link to your CSS -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <h1>QR Attendance System</h1>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="container">
+
+        <!-- HOME SECTION -->
+        <section id="homeSection" class="section">
+            <h2 class="section-title">Welcome</h2>
+            <p class="section-desc">Select a role to continue</p>
+
+            <div class="role-row">
+                <div class="role-card" onclick="display('admin')">
+                    <h3>Admin Panel</h3>
+                    <p>Manage students, classes, and reports</p>
+                    <button class="role-btn">Enter</button>
+                </div>
+
+                <div class="role-card" onclick="display('teacher')">
+                    <h3>Teacher Panel</h3>
+                    <p>Generate QR codes and track attendance</p>
+                    <button class="role-btn">Enter</button>
+                </div>
+
+                <div class="role-card" onclick="display('student')">
+                    <h3>Student Scanner</h3>
+                    <p>Scan QR codes to mark attendance</p>
+                    <button class="role-btn">Enter</button>
+                </div>
+            </div>
+        </section>
+
+       <!-- ADMIN SECTION -->
+<section id="adminSection" class="section" style="display:none;">
+    <h2 class="section-title">Admin Dashboard</h2>
+    <p class="section-desc">View attendance per lecture and student</p>
+
+    <!-- Filters -->
+    <div class="filter-row">
+        <div class="filter-group">
+            <label for="branchSelect">Branch:</label>
+            <select id="branchSelect">
+                <option value="">All</option>
+                <option value="CE">Computer Engineering</option>
+                <option value="EE">Electrical Engineering</option>
+                <option value="ME">Mechanical Engineering</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="yearSelect">Year:</label>
+            <select id="yearSelect">
+                <option value="">All</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sectionSelect">Section:</label>
+            <select id="sectionSelect">
+                <option value="">All</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="dateSelect">Date:</label>
+            <input type="date" id="dateSelect" value="">
+        </div>
+        <button class="action-btn" onclick="loadAttendance()">Filter</button>
+    </div>
+
+    <!-- Lecture Table -->
+    <div class="lectures-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lecture Code</th>
+                    <th>Time</th>
+                    <th># Students</th>
+                    <th>View Students</th>
+                </tr>
+            </thead>
+            <tbody id="lecturesBody">
+                <tr><td colspan="4" style="text-align:center;">No records yet</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal for Student List -->
+    <div id="studentModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3>Students List</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll Number</th>
+                        <th>Name</th>
+                        <th>Time Scanned</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <button class="back-btn" onclick="display('home')">Back</button>
+</section>
+
+
+        
+        <!-- TEACHER SECTION -->
+<section id="teacherSection" class="section" style="display:none;">
+    <h2 class="section-title">Teacher Panel</h2>
+    <p class="section-desc">Generate QR code for your lecture session</p>
+
+    <div class="lecture-input">
+        <label for="lectureCode">Lecture Code:</label>
+        <input type="text" id="lectureCode" placeholder="e.g., CS101">
+    </div>
+
+    <button class="role-btn" onclick="generateLectureQR()">Generate QR Code</button>
+
+    <div id="qrCodeContainer" class="margin"></div>
+    <button class="back-btn" onclick="display('home')">Back</button>
+</section>
+
+
+        <!-- STUDENT SECTION -->
+<section id="studentSection" style="display:none;">
+    <h2 class="section-title">Student Scanner</h2>
+    <p class="section-desc">Scan the lecture QR and enter your details</p>
+
+    <div id="reader" style="width:250px; height:250px; background:#eee; border-radius:20px; margin:10px auto;"></div>
+
+    <div id="studentForm" style="display:none; text-align:center; margin-top:10px;">
+        <input type="text" id="studentName" placeholder="Enter your Name">
+        <input type="text" id="rollNumber" placeholder="Enter your Roll Number">
+        <button class="role-btn" onclick="submitAttendance()">Submit Attendance</button>
+    </div>
+
+    <p id="scanResult" class="sub-heading"></p>
+    <button class="back-btn" onclick="display('home')">Back</button>
+</section>
+
+    </main>
+
+    <!-- JS -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        function display(section) {
+            const sections = ["home", "admin", "teacher", "student"];
+            sections.forEach(sec => {
+                document.getElementById(sec + "Section").style.display =
+                    sec === section ? "block" : "none";
+            });
+        }
+
+        // --- Teacher: Generate QR ---
+function generateLectureQR() {
+    const lectureCode = document.getElementById("lectureCode").value.trim();
+    if (!lectureCode) {
+        alert("Enter lecture code!");
+        return;
+    }
+
+    const now = new Date();
+    const date = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const time = now.toLocaleTimeString('en-GB', { hour12: false });
+
+    const qrData = `${lectureCode}|${date}|${time}`;
+    const qrContainer = document.getElementById("qrCodeContainer");
+    qrContainer.innerHTML = "";
+
+    const img = document.createElement("img");
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
+    qrContainer.appendChild(img);
+
+    console.log("Lecture QR generated:", qrData);
+}
+
+// --- Student: QR Scanner ---
+function startScanner() {
+    const scanner = new Html5Qrcode("reader");
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 200 },
+        scanned => {
+            document.getElementById("scanResult").innerText = "Lecture Scanned!";
+            document.getElementById("studentForm").style.display = "block";
+            scanner.stop();
+
+            // Save scanned lecture info temporarily
+            sessionStorage.setItem("currentLectureQR", scanned);
+        }
+    );
+}
+
+// Auto start scanner when student section opens
+const studentBtn = document.querySelector("button[onclick=\"display('student')\"]");
+studentBtn.addEventListener("click", () => setTimeout(startScanner, 500));
+
+// --- Student: Submit Attendance ---
+function submitAttendance() {
+    const name = document.getElementById("studentName").value.trim();
+    const roll = document.getElementById("rollNumber").value.trim();
+    const lectureQR = sessionStorage.getItem("currentLectureQR");
+
+    if (!name || !roll) {
+        alert("Please enter your Name and Roll Number!");
+        return;
+    }
+
+    const [lectureCode, date, time] = lectureQR.split("|");
+    const record = {
+        lectureCode,
+        date,
+        time,
+        studentName: name,
+        rollNumber: roll,
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    // Store in localStorage (mocking backend)
+    let allRecords = JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+    allRecords.push(record);
+    localStorage.setItem("attendanceRecords", JSON.stringify(allRecords));
+
+    alert("Attendance marked successfully!");
+    document.getElementById("studentForm").reset();
+    document.getElementById("studentForm").style.display = "none";
+    document.getElementById("scanResult").innerText = "Attendance Submitted!";
+}
+
+function handleLectureScan(scannedData) {
+    // parsed lecture info
+    const [lectureCode, date, time] = scannedData.split('|');
+
+    // prompt student for details
+    const studentName = prompt("Enter your full name:");
+    const rollNumber = prompt("Enter your Roll Number:");
+
+    if (!studentName || !rollNumber) {
+        alert("All fields are required to mark attendance!");
+        return;
+    }
+
+    const attendanceRecord = {
+        lectureCode,
+        date,
+        time,
+        studentName,
+        rollNumber,
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    // store the record in local storage (or send to backend)
+    let records = JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+    records.push(attendanceRecord);
+    localStorage.setItem("attendanceRecords", JSON.stringify(records));
+
+    alert("Attendance marked successfully!");
+}
+function loadAttendance() {
+    const branch = document.getElementById("branchSelect").value;
+    const year = document.getElementById("yearSelect").value;
+    const section = document.getElementById("sectionSelect").value;
+    const date = document.getElementById("dateSelect").value;
+
+    const records = JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+
+    // Filter by selected options
+    const filteredRecords = records.filter(rec => 
+        (!branch || rec.branch === branch) &&
+        (!year || rec.year === year) &&
+        (!section || rec.section === section) &&
+        (!date || rec.date === date)
+    );
+
+    // Group by lectureCode + time
+    const lectureMap = {};
+    filteredRecords.forEach(rec => {
+        const key = rec.lectureCode + "|" + rec.time;
+        if (!lectureMap[key]) lectureMap[key] = [];
+        lectureMap[key].push(rec);
+    });
+
+    const tbody = document.getElementById("lecturesBody");
+    tbody.innerHTML = "";
+
+    if (Object.keys(lectureMap).length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No lectures found</td></tr>`;
+        return;
+    }
+
+    for (const key in lectureMap) {
+        const [lectureCode, time] = key.split("|");
+        const count = lectureMap[key].length;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${lectureCode}</td>
+            <td>${time}</td>
+            <td>${count}</td>
+            <td><button onclick="viewStudents('${key}')">View Students</button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
+
+// Open Modal with Students List
+function viewStudents(lectureKey) {
+    const records = JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+    const students = records.filter(rec => (rec.lectureCode + "|" + rec.time) === lectureKey);
+
+    const tbody = document.getElementById("studentsBody");
+    tbody.innerHTML = "";
+
+    students.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${s.rollNumber}</td>
+            <td>${s.studentName}</td>
+            <td>${s.timestamp}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("studentModal").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("studentModal").style.display = "none";
+}
+
+
+
+
+    </script>
+</body>
+</html>
