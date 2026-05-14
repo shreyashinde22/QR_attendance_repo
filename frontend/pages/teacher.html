@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Dashboard — QR Attendance</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <style>
+    /* Teacher dashboard layout */
+    .teacher-layout {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .teacher-main {
+      flex: 1;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Session area top grid */
+    .session-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* QR card */
+    .qr-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      backdrop-filter: blur(20px);
+    }
+    .qr-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    /* Live feed */
+    .live-feed-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(20px);
+    }
+
+    /* No session placeholder */
+    #no-session-panel {
+      text-align: center;
+      padding: 80px 40px;
+      background: var(--card-bg);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-xl);
+      margin-bottom: 24px;
+    }
+    .no-session-icon { font-size: 4rem; opacity: 0.3; margin-bottom: 20px; }
+
+    /* Stats row */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .session-grid { grid-template-columns: 1fr; }
+      .quick-stats { grid-template-columns: repeat(2, 1fr); }
+      .teacher-main { padding: 20px 16px; }
+    }
+    @media (max-width: 480px) {
+      .quick-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body data-page="teacher" class="teacher-layout">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="logo">
+      <div class="logo-icon">🔒</div>
+      <span>QR Attend</span>
+    </div>
+    <div class="header-right">
+      <div id="live-indicator" class="live-dot hidden">Live Session</div>
+      <div class="user-chip">
+        <div class="avatar" id="header-avatar">P</div>
+        <div>
+          <div class="user-name" id="header-user-name">Prof. Sharma</div>
+          <div class="user-role" id="header-user-role">Teacher</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main class="teacher-main">
+
+    <!-- Page Header -->
+    <div class="page-header flex-between" style="margin-bottom:28px">
+      <div>
+        <h2>Teacher Dashboard</h2>
+        <div class="breadcrumb">
+          <span>📅 Wednesday, 08 April 2026</span>
+          <span>·</span>
+          <span>Computer Science Department</span>
+        </div>
+      </div>
+      <button id="start-session-btn" class="btn btn-primary btn-lg">
+        <span>▶</span> Start Session
+      </button>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="quick-stats stagger">
+      <div class="stat-card">
+        <div class="stat-label">Today's Sessions</div>
+        <div class="stat-value">3</div>
+        <div class="stat-delta up">↑ 1 from yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Attendance</div>
+        <div class="stat-value">87%</div>
+        <div class="stat-delta up">↑ 3% this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value">127</div>
+        <div class="stat-delta" style="color:var(--text-muted)">Across 3 classes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sessions This Week</div>
+        <div class="stat-value">12</div>
+        <div class="stat-delta down">↓ 2 cancelled</div>
+      </div>
+    </div>
+
+    <!-- No Session Panel -->
+    <div id="no-session-panel">
+      <div class="no-session-icon">📋</div>
+      <h3 style="color:var(--text-secondary);margin-bottom:10px">No Active Session</h3>
+      <p style="margin-bottom:24px;max-width:340px;margin-left:auto;margin-right:auto">
+        Start an attendance session to generate a secure, rotating QR code for your class.
+      </p>
+      <button class="btn btn-primary" onclick="document.getElementById('start-session-btn').click()">
+        <span>▶</span> Start Attendance Session
+      </button>
+    </div>
+
+    <!-- Active Session Panel (hidden until session starts) -->
+    <div id="session-panel" class="hidden">
+
+      <div class="session-grid">
+
+        <!-- QR Code Card -->
+        <div class="qr-card card-glow">
+          <div class="qr-card-header">
+            <div>
+              <h3 style="margin-bottom:4px">Live QR Code</h3>
+              <p style="font-size:0.82rem">Refreshes automatically</p>
+            </div>
+            <div class="live-dot">Active</div>
+          </div>
+
+          <div class="qr-container">
+            <div class="qr-frame">
+              <div id="qr-canvas" style="width:220px;height:220px"></div>
+            </div>
+            <div class="qr-timer">
+              <span>Refreshes in</span>
+              <div class="qr-countdown" id="qr-countdown">30</div>
+              <span>seconds</span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-family:monospace" id="qr-token-display">
+              Token: —
+            </div>
+          </div>
+
+          <!-- Session info grid -->
+          <div class="session-info-grid">
+            <div class="session-info-item">
+              <div class="value" id="session-subject-display">—</div>
+              <div class="label">Subject</div>
+            </div>
+            <div class="session-info-item">
+              <div class="value" id="session-room-display">—</div>
+              <div class="label">Room</div>
+            </div>
+            <div class="session-info-item">
+              <div class="value" id="session-time-display">—</div>
+              <div class="label">Started</div>
+            </div>
+            <div class="session-info-item">
+              <div class="value" id="live-count" style="color:var(--success);transition:transform 0.2s">0</div>
+              <div class="label">Present</div>
+            </div>
+          </div>
+
+          <button id="end-session-btn" class="btn btn-danger full-width hidden">
+            ⬛ End Session
+          </button>
+        </div>
+
+        <!-- Live Feed Card -->
+        <div class="live-feed-card">
+          <div class="flex-between">
+            <h3>Live Feed</h3>
+            <span class="badge badge-blue" id="feed-count">0 scanned</span>
+          </div>
+          <p style="font-size:0.82rem">Real-time attendance submissions</p>
+          <div class="divider"></div>
+          <div id="live-feed" style="display:flex;flex-direction:column;gap:0">
+            <div class="alert alert-info">
+              <span>ℹ</span><span>Waiting for students to scan...</span>
+            </div>
+          </div>
+
+          <!-- Attendance progress -->
+          <div style="margin-top:auto;padding-top:16px">
+            <div class="flex-between" style="font-size:0.8rem;margin-bottom:8px">
+              <span style="color:var(--text-muted)">Class attendance</span>
+              <span style="color:var(--text-secondary)"><span id="live-count-2">0</span>/45 students</span>
+            </div>
+            <div class="progress-bar" style="height:8px">
+              <div class="progress-fill" id="attendance-progress" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="card" style="margin-top:24px">
+      <div class="flex-between" style="margin-bottom:20px">
+        <div>
+          <h3 style="margin-bottom:4px">Recent Sessions</h3>
+          <p style="font-size:0.82rem">Your attendance history</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="showGlobalAlert('Full report exported.','success')">
+          ↓ Export
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Class</th>
+              <th>Date & Time</th>
+              <th>Attendance</th>
+              <th>Rate</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="recent-sessions-tbody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Start Session Modal -->
+  <div class="modal-overlay hidden" id="start-session-modal">
+    <div class="modal">
+      <button class="modal-close" id="modal-close-btn">✕</button>
+      <div class="modal-header">
+        <div class="modal-title">Start Attendance Session</div>
+        <div class="modal-subtitle">Configure your class session details</div>
+      </div>
+      <div class="modal-body">
+
+        <div id="fill-all-alert" class="alert alert-error hidden">
+          ✗ Please fill all fields before starting.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <select class="form-input form-select" id="session-subject">
+            <option value="">Select subject</option>
+            <option value="Data Structures">Data Structures (CS-301)</option>
+            <option value="Computer Networks">Computer Networks (CS-401)</option>
+            <option value="DBMS">Database Management (CS-302)</option>
+            <option value="Operating Systems">Operating Systems (CS-303)</option>
+            <option value="Machine Learning">Machine Learning (CS-501)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Room / Location</label>
+          <select class="form-input form-select" id="session-room">
+            <option value="">Select room</option>
+            <option value="LH-101">LH-101 (Lecture Hall)</option>
+            <option value="LH-102">LH-102 (Lecture Hall)</option>
+            <option value="CS-Lab-1">CS Lab 1</option>
+            <option value="CS-Lab-2">CS Lab 2</option>
+            <option value="Seminar Hall">Seminar Hall</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Session Duration</label>
+          <select class="form-input form-select" id="session-duration">
+            <option value="60">1 Hour</option>
+            <option value="90" selected>1.5 Hours</option>
+            <option value="120">2 Hours</option>
+          </select>
+        </div>
+
+        <div class="alert alert-warning">
+          <span>⚠</span>
+          <span>QR code refreshes every 30 seconds. Students must scan the current code.</span>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modal-cancel" onclick="closeModal('start-session-modal')">Cancel</button>
+        <button class="btn btn-primary" id="create-session-btn">
+          <span>▶</span> Start Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS also updates live-count-2 and progress bar -->
+  <script src="../script/script.js"></script>
+  <script>
+    // Sync secondary live count and progress bar
+    const origSimulate = window.simulateStudentScan;
+    setInterval(() => {
+      const count = parseInt(document.getElementById('live-count')?.textContent || '0');
+      const el2 = document.getElementById('live-count-2');
+      if (el2) el2.textContent = count;
+      const prog = document.getElementById('attendance-progress');
+      if (prog) prog.style.width = Math.min((count / 45) * 100, 100) + '%';
+      const feedCount = document.getElementById('feed-count');
+      if (feedCount) feedCount.textContent = count + ' scanned';
+    }, 500);
+  </script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard — QR Attendance</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <style>
+    .student-main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* Today's classes overview */
+    .today-classes { display: flex; flex-direction: column; gap: 10px; }
+    .class-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }
+    .class-item:hover { background: rgba(255,255,255,0.05); }
+    .class-time { font-size: 0.75rem; color: var(--text-muted); min-width: 70px; }
+    .class-name { font-weight: 600; font-size: 0.9rem; flex: 1; padding: 0 12px; }
+    .class-room { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* Attendance ring chart (CSS) */
+    .ring-chart {
+      position: relative;
+      width: 100px; height: 100px;
+      flex-shrink: 0;
+    }
+    .ring-chart svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 8; }
+    .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+    }
+    .ring-pct { font-size: 1.3rem; font-weight: 800; }
+    .ring-sub { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* Face verification placeholder */
+    .face-verify-box {
+      border: 2px dashed rgba(0,212,255,0.25);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .face-preview {
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(0,212,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 3rem;
+      position: relative;
+    }
+    .face-scanline {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      animation: face-scan 2s ease-in-out infinite;
+    }
+    @keyframes face-scan {
+      0% { top: 10%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 90%; opacity: 0; }
+    }
+    .coming-soon {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 100px;
+      font-size: 0.72rem;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .student-main { padding: 20px 12px; }
+    }
+  </style>
+</head>
+<body data-page="student">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="logo">
+      <div class="logo-icon">🔒</div>
+      <span>QR Attend</span>
+    </div>
+    <div class="header-right">
+      <div class="user-chip">
+        <div class="avatar" style="background:linear-gradient(135deg,var(--success),#00ffaa)" id="header-avatar">R</div>
+        <div>
+          <div class="user-name" id="header-user-name">Rahul Mehta</div>
+          <div class="user-role" id="header-user-role">Student</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main class="student-main">
+
+    <!-- Greeting -->
+    <div class="page-header" style="margin-bottom:24px">
+      <h2>Good Morning, Rahul 👋</h2>
+      <div class="breadcrumb">
+        <span>📅 Wednesday, 08 April 2026</span>
+        <span>·</span>
+        <span>CS-301 · 3rd Year</span>
+      </div>
+    </div>
+
+    <!-- Attendance Overview Card -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="flex-between">
+        <div>
+          <h3 style="margin-bottom:6px">Overall Attendance</h3>
+          <p style="font-size:0.85rem">This semester · All subjects</p>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <div class="flex-between" style="font-size:0.8rem">
+              <span style="color:var(--text-muted)">Present</span>
+              <span style="color:var(--text-primary);font-weight:600">86 / 100 classes</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill success" style="width:86%"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--success)">✓ Above 75% minimum requirement</div>
+          </div>
+        </div>
+        <!-- Ring chart -->
+        <div class="ring-chart" data-pct="86">
+          <svg viewBox="0 0 100 100" width="100" height="100">
+            <circle class="ring-bg" cx="50" cy="50" r="40"/>
+            <circle class="ring-fill" cx="50" cy="50" r="40"
+              stroke="var(--success)"
+              stroke-dasharray="251.2"
+              stroke-dashoffset="35.2"
+              id="ring-circle"
+            />
+          </svg>
+          <div class="ring-label">
+            <div class="ring-pct" style="color:var(--success)">86%</div>
+            <div class="ring-sub">attend.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan Section -->
+    <div class="card card-glow" style="margin-bottom:20px">
+      <div class="flex-between" style="margin-bottom:16px">
+        <div>
+          <h3 style="margin-bottom:4px">Mark Attendance</h3>
+          <p style="font-size:0.82rem">Enter the QR code shown by your teacher</p>
+        </div>
+        <button id="scan-btn" class="btn btn-primary">
+          📷 Scan QR
+        </button>
+      </div>
+
+      <!-- Scan Zone (shown on button click) -->
+      <div class="scan-zone" id="scan-zone" onclick="document.getElementById('scan-btn').click()">
+        <div class="scan-icon">📲</div>
+        <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:6px">
+          Tap to scan your teacher's QR code
+        </p>
+        <p style="font-size:0.78rem;color:var(--text-muted)">
+          Make sure you're physically present in class
+        </p>
+      </div>
+
+      <!-- Code Input (hidden until scan activated) -->
+      <div id="code-input-section" class="hidden" style="margin-top:16px">
+        <div class="alert alert-warning" style="margin-bottom:12px">
+          <span>⚠</span><span>Codes expire every 30 seconds. Enter quickly!</span>
+        </div>
+        <div class="flex gap-12">
+          <input
+            type="text"
+            id="qr-code-input"
+            class="form-input"
+            placeholder="Enter QR code (e.g. AB12CD)"
+            style="font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;font-size:1.1rem"
+            maxlength="10"
+          />
+          <button id="submit-scan" class="btn btn-primary" style="white-space:nowrap">
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Status Card -->
+    <div id="status-panel" class="card" style="margin-bottom:20px">
+      <div class="status-display">
+        <div class="status-icon-wrap idle">
+          <span>📋</span>
+        </div>
+        <div class="status-text" style="color:var(--text-muted)">No Scan Yet</div>
+        <div class="status-subtext">Your attendance status will appear here</div>
+      </div>
+    </div>
+
+    <!-- Face Verification Placeholder -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="face-verify-box">
+        <div class="coming-soon">✦ Coming Soon</div>
+        <div class="face-preview">
+          🤳
+          <div class="face-scanline"></div>
+        </div>
+        <h4 style="margin-bottom:8px">Face Verification</h4>
+        <p style="font-size:0.82rem;max-width:280px;margin:0 auto">
+          Biometric face scan for additional anti-proxy protection. Launching in next update.
+        </p>
+      </div>
+    </div>
+
+    <!-- Attendance History -->
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:20px">
+        <div>
+          <h3 style="margin-bottom:4px">Attendance History</h3>
+          <p style="font-size:0.82rem">Your recent attendance records</p>
+        </div>
+        <div class="tabs" style="margin-bottom:0;width:auto">
+          <div class="tab active" onclick="this.parentNode.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">Recent</div>
+          <div class="tab" onclick="this.parentNode.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">All</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Date & Time</th>
+              <th>Status</th>
+              <th>Code</th>
+            </tr>
+          </thead>
+          <tbody id="student-history-tbody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Today's Schedule -->
+    <div class="card" style="margin-top:20px">
+      <div style="margin-bottom:16px">
+        <h3 style="margin-bottom:4px">Today's Schedule</h3>
+        <p style="font-size:0.82rem">Wednesday, 08 April 2026</p>
+      </div>
+      <div class="today-classes">
+        <div class="class-item">
+          <span class="class-time">08:00 AM</span>
+          <span class="class-name">Computer Networks</span>
+          <span class="class-room">LH-101</span>
+          <span class="badge badge-success badge-dot">Done</span>
+        </div>
+        <div class="class-item" style="border-color:rgba(45,111,255,0.3);background:rgba(45,111,255,0.05)">
+          <span class="class-time">10:00 AM</span>
+          <span class="class-name">Data Structures</span>
+          <span class="class-room">CS-Lab-1</span>
+          <span class="badge badge-blue badge-dot">Now</span>
+        </div>
+        <div class="class-item">
+          <span class="class-time">02:00 PM</span>
+          <span class="class-name">DBMS Lab</span>
+          <span class="class-room">CS-Lab-2</span>
+          <span class="badge badge-muted">Upcoming</span>
+        </div>
+        <div class="class-item">
+          <span class="class-time">04:00 PM</span>
+          <span class="class-name">Machine Learning</span>
+          <span class="class-room">LH-102</span>
+          <span class="badge badge-muted">Upcoming</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="../script/script.js"></script>
+</body>
+</html>
